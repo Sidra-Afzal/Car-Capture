@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Studio Photo Capture</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:sans-serif; }
+    #camera-container { position: relative; width: 100vw; max-width: 480px; margin: 0 auto; }
+    #video, #angle-overlay { width: 100%; border-radius: 12px; }
+    #angle-overlay {
+      position: absolute; top:0; left:0; pointer-events: none; opacity: 0.6;
+      z-index: 2;
+    }
+    #capture-btn, #download-btn {
+      display: block; width: 96%; margin: 16px auto 0 auto; padding: 12px;
+      border-radius: 8px; border: none; background: #007bff; color: #fff; font-size: 1.2em;
+    }
+    #download-btn { background: #28a745; display: none; }
+    #snapshot { display: none; width: 100%; margin-top: 12px; border-radius: 12px; }
+    #instructions {
+      text-align:center; margin: 8px 0 8px 0; font-size: 1.1em; color: #b0f;
+    }
+  </style>
+</head>
+<body>
+  <div id="instructions">Align the car inside the frame and tap "Capture".</div>
+  <div id="camera-container">
+    <video id="video" autoplay playsinline></video>
+    <!-- Replace the src below with your desired angle/frame overlay PNG (transparent background) -->
+    <img src="imgs/side1.png" id="angle-overlay" />
+    <canvas id="snapshot"></canvas>
+  </div>
+  <button id="capture-btn">Capture</button>
+  <button id="download-btn">Download Photo</button>
+
+  <script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('angle-overlay');
+    const canvas = document.getElementById('snapshot');
+    const captureBtn = document.getElementById('capture-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    // --- Start camera with rear lens if possible ---
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } }
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        // fallback to default camera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      }
+    }
+    startCamera();
+
+    // --- Adjust overlay size on resize ---
+    function resizeOverlay() {
+      overlay.style.height = video.offsetHeight + 'px';
+      overlay.style.width = video.offsetWidth + 'px';
+    }
+    video.onloadedmetadata = resizeOverlay;
+    window.onresize = resizeOverlay;
+
+    // --- Capture Photo ---
+    captureBtn.onclick = function() {
+      const w = video.videoWidth, h = video.videoHeight;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, w, h);
+      // draw overlay for user's reference (optional: comment if you want only the pure photo)
+      // const overlayImg = new Image();
+      // overlayImg.src = overlay.src;
+      // overlayImg.onload = () => { ctx.globalAlpha = 0.6; ctx.drawImage(overlayImg, 0, 0, w, h); }
+      canvas.style.display = 'block';
+      downloadBtn.style.display = 'block';
+      captureBtn.textContent = "Retake";
+    };
+
+    // --- Download Photo ---
+    downloadBtn.onclick = function() {
+      const link = document.createElement('a');
+      link.download = "car_photo.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+  </script>
+</body>
+</html>
